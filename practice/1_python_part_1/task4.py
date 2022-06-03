@@ -10,4 +10,18 @@ from typing import List
 
 
 def calculate_power_with_difference(ints: List[int]) -> List[int]:
-    ...
+    powers = []
+    previous_difference = [0]
+    result = []
+
+    for number in ints:
+        powers.append(number**2)
+
+    for index, number in enumerate(ints[:-1]):
+        previous_difference.append(powers[index] - number)
+    
+    zipped = zip(powers, previous_difference)
+    for powers, previous_difference in zipped:
+        result.append(powers - previous_difference)
+    
+    return result

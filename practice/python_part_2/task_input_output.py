@@ -18,6 +18,23 @@ Examples:
 
 
 def read_numbers(n: int) -> str:
-    ...
+    count = 0
+    sum = 0
+
+    for i in range(n):
+        value = input()
+        try:
+            value=float(value)
+            count = count + 1
+            sum = sum + value
+        except ValueError:
+            pass
+
+    if count > 0:
+        return "Avg: {:.2f}".format(sum/count)
+    else:
+        return "No numbers entered"
+
+
 
 
