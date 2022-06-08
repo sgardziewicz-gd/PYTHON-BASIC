@@ -15,10 +15,40 @@ Example:
 """
 
 import argparse
+import sys
+import faker
 
 
-def print_name_address(args: argparse.Namespace) -> None:
-    ...
+
+
+### Modified to run like: 'python task_4.py 2 --data fake-address=address fake-name=name'
+def print_name_address(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("number")
+    parser.add_argument("--data", nargs='+')
+    args = parser.parse_args()
+    number = int(args.number)
+    d = {}
+    for item in args.data:
+        i = item.split('=')
+        d[i[0]] = i[1]
+
+    print_from_kwargs(number, d)
+    
+
+def print_from_kwargs(number: int, dict) -> None:
+    fake=faker.Faker()
+
+    for i in range(number):
+        result = {}
+        for key, value in dict.items():
+            fake_function = getattr(fake, value)
+            result[key] = fake_function()
+        print(result)
+    
+
+#print_name_address(sys.argv[1:])
+
 
 
 """
@@ -30,3 +60,14 @@ Example:
     >>> m.method()
     123
 """
+from unittest.mock import patch
+
+
+
+@patch('faker.providers.person.Provider.name', side_effect=["Testowy Chlop"])
+@patch('faker.providers.address.Provider.address', side_effect=["Testowy Adres"])
+def test_print_from_kwargs(mock1, mock2, capfd):
+    test_dict = {"fake_name":"name", "fake_adress":"address"}
+    print_from_kwargs(1, test_dict)
+    out, err = capfd.readouterr()
+    assert out == "{'fake_name': 'Testowy Chlop', 'fake_adress': 'Testowy Adres'}\n"

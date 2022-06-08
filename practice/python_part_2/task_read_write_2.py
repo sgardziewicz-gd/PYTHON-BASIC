@@ -22,3 +22,16 @@ def generate_words(n=20):
         words.append(word)
 
     return words
+
+
+def read_write_2(file_1, file_2, n):
+    words = generate_words(n)
+
+    with open(file_1, "w", encoding="utf-8") as f:
+        f.write('\n'.join(words))
+
+    with open(file_2, "w", encoding="cp1252") as f:
+        f.write(','.join(words[::-1]))
+
+    print(words)
+
