@@ -1,9 +1,6 @@
 import json
 import os
-
-
-path_to_city_short = 'tests/example_data/Brest/2021_09_25.json'
-path_to_city = '/Users/sgardziewicz/Python Basics/PYTHON-BASIC/practice/5_additional_topics/parsing_serialization_task/tests/example_data/Brest/2021_09_25.json'
+from termios import CINTR
 
 
 def get_hourly_from_city(path):
@@ -22,12 +19,12 @@ def get_temp_and_wind_speed(data_hourly):
 
 def calculate_statistics(temp, wind_speed):
     city_stats = {}
-    city_stats['temp_min'] = min(temp)
-    city_stats['temp_max'] = max(temp)
-    city_stats['temp_mean'] = sum(temp) / len(temp)
-    city_stats['wind_min'] = min(wind_speed)
-    city_stats['wind_max'] = max(wind_speed)
-    city_stats['wind_mean'] = sum(wind_speed) / len(wind_speed)
+    city_stats['temp_min'] = round(min(temp), 2)
+    city_stats['temp_max'] = round(max(temp), 2)
+    city_stats['temp_mean'] = round((sum(temp) / len(temp)), 2)
+    city_stats['wind_min'] = round(min(wind_speed), 2)
+    city_stats['wind_max'] = round(max(wind_speed), 2)
+    city_stats['wind_mean'] = round(sum(wind_speed) / len(wind_speed), 2)
     return city_stats
 
 
@@ -35,7 +32,7 @@ def get_stats_from_city(path_to_city):
     data_hourly = get_hourly_from_city(path_to_city)
     temp, wind_speed = get_temp_and_wind_speed(data_hourly)
     city_stats = {}
-    city_stats['stats'] = calculate_statistics(temp, wind_speed)
+    city_stats = calculate_statistics(temp, wind_speed)
     return city_stats
 
 
@@ -47,25 +44,17 @@ def get_path_of_cities(source_data_path):
                 file_paths.append(os.path.join(root, file))
     return file_paths
 
-long_path = "/Users/sgardziewicz/Python Basics/PYTHON-BASIC/practice/5_additional_topics/parsing_serialization_task/source_data"
 
-test_data_short_path = "./tests/example_data"
+def get_stats_for_all_cities(list_of_paths):
+    all_cities = {}
+    for city_path in list_of_paths:
+        path = os.path.dirname(city_path)
+        city_name = os.path.basename(path)
+        all_cities[city_name] = get_stats_from_city(city_path)
+    return all_cities
 
-list_of_paths = get_path_of_cities(test_data_short_path)
-#list_of_paths = get_path_of_cities(long_path)
-all_cities = {}
-for city_path in list_of_paths:
-    path = os.path.dirname(city_path)
-    city_name = os.path.basename(path)
-    all_cities[city_name] = get_stats_from_city(city_path)
 
-# print(all_cities)
-# print(3)
-
-print(all_cities["Minsk"]["stats"])
-print(type(all_cities))
-
-def calculate_country_stats(all_cities_dict):
+def calculate_country_stats(all_cities):
     temp_sum = 0
     wind_sum = 0
     coldest_temp = 1000.0
@@ -73,28 +62,50 @@ def calculate_country_stats(all_cities_dict):
     fastest_wind = 0.0
 
     for k, v in all_cities.items():
-        print(k, v['stats']['temp_mean'])
-        temp_sum = temp_sum + v['stats']['temp_mean']
-        wind_sum = wind_sum + v['stats']['wind_mean']
-        if v['stats']['temp_mean'] < coldest_temp:
-            coldest_temp = v['stats']['temp_mean']
+        #print(k, v['temp_mean'])
+        temp_sum = temp_sum + v['temp_mean']
+        wind_sum = wind_sum + v['wind_mean']
+        if v['temp_mean'] < coldest_temp:
+            coldest_temp = v['temp_mean']
             coldest_place = k
-        if v['stats']['temp_mean'] > warmest_temp:
-            warmest_temp = v['stats']['temp_mean']
+        if v['temp_mean'] > warmest_temp:
+            warmest_temp = v['temp_mean']
             warmest_place = k
-        if v['stats']['wind_mean'] > fastest_wind:
-            fastest_wind = v['stats']['wind_mean']
+        if v['wind_mean'] > fastest_wind:
+            fastest_wind = v['wind_mean']
             windiest_place = k
 
-    country_temp_mean = temp_sum / len(all_cities.items())
-    country_wind_mean = wind_sum / len(all_cities.items())
-
+    country_temp_mean = round(temp_sum / len(all_cities.items()), 2)
+    country_wind_mean = round(wind_sum / len(all_cities.items()), 2)
     return country_temp_mean, country_wind_mean, coldest_place, warmest_place, windiest_place
 
 
-country_temp, country_wind, coldest_place, warmest_place, windiest_place = calculate_country_stats(all_cities)
+def get_date_from_path(list_of_paths):
+    date =  os.path.basename(list_of_paths[0]).split('.')[0]
+    return date.replace('_', '-')
 
-print(f"temp mean{country_temp}, wind mean{country_wind}")
-print(coldest_place)
-print(warmest_place)
-print(windiest_place)
+
+def generate_xml(country_name, path):
+    list_of_paths = get_path_of_cities(path)
+    all_cities = get_stats_for_all_cities(list_of_paths)
+    all_cities = dict(sorted(all_cities.items()))
+    country_temp, country_wind, coldest_place, warmest_place, windiest_place = calculate_country_stats(all_cities)
+    date = get_date_from_path(list_of_paths)
+
+    xml = [f'<weather country="{country_name}" date="{date}">']
+    xml.append(f'  <summary mean_temp="{country_temp}" mean_wind_speed="{country_wind}" coldest_place="{coldest_place}" warmest_place="{warmest_place}" windiest_place="{windiest_place}"/>')
+    xml.append(f'  <cities>')
+    for k, v in all_cities.items():
+        xml.append(f'    <{k.replace(" ", "-")} mean_temp="{v["temp_mean"]}" mean_wind_speed="{v["wind_mean"]}" min_temp="{v["temp_min"]}" min_wind_speed="{v["wind_min"]}" max_temp="{v["temp_max"]}" max_wind_speed="{v["wind_max"]}" />')
+    xml.append(f'  </cities>')
+    xml.append(f'</weather>')
+    with open(f'{country_name}_weather.xml', 'w') as f:
+        f.write('\n'.join(xml))
+
+
+#long_path = "/Users/sgardziewicz/Python Basics/PYTHON-BASIC/practice/5_additional_topics/parsing_serialization_task/source_data"
+test_data_short_path = "./tests/example_data"
+spain_data_path = "./source_data"
+
+generate_xml('Spain', spain_data_path)
+
