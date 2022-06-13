@@ -69,4 +69,4 @@ def check_result(xml_path: str):
 
 
 if __name__ == '__main__':
-    check_result(xml_path='./example_result.xml')
+    check_result(xml_path='./Spain_weather.xml')
