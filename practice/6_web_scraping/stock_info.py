@@ -41,9 +41,13 @@ def get_symbols():
     url = "https://finance.yahoo.com/most-active"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    symbols = []
+    symbols = {}
+    i = 0
     for tr in soup.find_all('a', {'class': 'Fw(600) C($linkColor)'}):
-        symbols.append(tr.text)
+        symbols[tr.text] = None
+        # i += 1
+        # if i > 5:
+        #     break
     return symbols
 
 
@@ -54,21 +58,70 @@ def findCountry(stringText):
             return country
     return None
 
-def get_number_of_employees(symbol):
+def get_info_from_profile(symbol):
     url = "https://finance.yahoo.com/quote/{}/profile?p={}".format(symbol, symbol)
-    user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+    user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.115 Safari/537.36'
     headers = {'User-Agent': user_agent}
     cookies = {"cookie":"t=1655116572&j=1&u=1---&v=39"}
     response = requests.get(url, headers=headers, cookies=cookies)
     soup = BeautifulSoup(response.text, 'html.parser')
-    employees = soup.find_all('span', {'class': 'Fw(600)'})[2].text
-    ceo_year_born = soup.find_all('td', {'class': 'Ta(end)'})[2].text
-    ceo_name = soup.find_all('td', {'class': 'Ta(start)'})[0].text
-    country = findCountry(soup.find_all('p', {'class': 'D(ib)'})[0].text)
+    profile_data = {
+        'company_name' : soup.find('h3', {'class': 'Fz(m)'}).text,
+        'code' : symbol,
+        'country' : findCountry(soup.find_all('p', {'class': 'D(ib)'})[0].text),
+        'employees' : soup.find_all('span', {'class': 'Fw(600)'})[2].text,
+        'ceo_name' : soup.find_all('td', {'class': 'Ta(start)'})[0].text,
+        'ceo_year_born' : '1900' if soup.find_all('td', {'class': 'Ta(end)'})[2].text == 'N/A'\
+                                 else soup.find_all('td', {'class': 'Ta(end)'})[2].text
+    }
+    return profile_data
 
-    return employees, ceo_year_born, ceo_name, country
 
-print(get_number_of_employees('AMZN'))
+def fill_symbols_with_info(symbols):
+    for symbol in symbols:
+        symbols[symbol] = get_info_from_profile(symbol)
+    return symbols
 
 
+def get_n_youngest_companies(n, symbols):
+    symbols_sorted = sorted(symbols.items(), key=lambda x: x[1]['ceo_year_born'], reverse=True)
+    return symbols_sorted[:n]
 
+
+def append_youngest_ceos_data(data_to_print, youngest_5):
+    for company in youngest_5:
+        data_to_print.append([company[1]['company_name'], company[1]['code'], company[1]['country'],\
+                            company[1]['employees'], company[1]['ceo_name'], company[1]['ceo_year_born']])
+
+
+def print_sheet(column_names, title, padding_spaces, stock_info, append_function):
+    data_to_print = []
+    data_to_print.append(column_names)
+    append_function(data_to_print, stock_info)
+    widths = [max(map(len, col)) for col in zip(*data_to_print)]
+    longest_row_character_length = sum(widths)
+    centered_title = title.center(longest_row_character_length+padding_spaces, '=')
+    separator = ''.center(longest_row_character_length+padding_spaces, '-')
+    print(centered_title)
+    del data_to_print[0]
+    print ("| " + " | ".join((val.ljust(width) for val, width in zip(column_names, widths))) + " |")
+    print(separator)
+    for row in data_to_print:
+        print ("| " + " | ".join((val.ljust(width) for val, width in zip(row, widths))) + " |")
+    print('\n')
+
+
+def main():
+    symbols = get_symbols()
+    symbols = fill_symbols_with_info(symbols)
+    youngest_5 = get_n_youngest_companies(5, symbols)
+
+    column_names = (['Name', 'Code', 'Country', 'Employees', 'CEO Name', 'CEO Year Born'])
+    title = '5 stocks with most youngest CEOs'
+    padding_spaces = 19
+
+    print_sheet(column_names, title, padding_spaces, youngest_5, append_youngest_ceos_data)
+
+
+if __name__ == '__main__':
+    main()
